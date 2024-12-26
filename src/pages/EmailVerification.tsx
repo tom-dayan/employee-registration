@@ -124,7 +124,7 @@ export default function EmailVerification() {
               color: 'transparent',
             }}
           >
-            {showRegistration ? 'Register Your Business' : 'Welcome Back'}
+            {showRegistration ? 'Register Your Business' : 'Welcome'}
           </Typography>
 
           <AnimatePresence mode="wait">
