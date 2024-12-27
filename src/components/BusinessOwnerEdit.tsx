@@ -1,3 +1,4 @@
+// In BusinessOwnerEdit.tsx
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -8,16 +9,25 @@ import {
   Button,
   Grid,
 } from '@mui/material';
-import { StorageService, StoredBusinessOwner } from '../utils/storage';
+import { BusinessOwner, actions } from '../stores/root-store';
 
 interface BusinessOwnerEditProps {
   open: boolean;
   onClose: () => void;
-  owner: StoredBusinessOwner;
+  owner: Readonly<BusinessOwner>;
+}
+
+// Define a type for the editable fields
+interface EditableOwnerData {
+  firstName: string;
+  lastName: string;
+  businessName: string;
+  phone: string;
+  emailTemplate: string;
 }
 
 export default function BusinessOwnerEdit({ open, onClose, owner }: BusinessOwnerEditProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EditableOwnerData>({
     firstName: '',
     lastName: '',
     businessName: '',
@@ -39,16 +49,15 @@ export default function BusinessOwnerEdit({ open, onClose, owner }: BusinessOwne
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     try {
-      const updatedOwner: StoredBusinessOwner = {
+      // Create a new owner object with updated data while maintaining the original structure
+      const updatedOwner: BusinessOwner = {
         ...owner,
         ...formData,
+        employees: [...owner.employees], // Create a new array reference
       };
-      
-      StorageService.saveOwner(updatedOwner);
+      actions.updateOwner(updatedOwner);
       onClose();
-      window.location.reload(); // Refresh to show updated data
     } catch (error) {
       console.error('Failed to update business owner:', error);
     }

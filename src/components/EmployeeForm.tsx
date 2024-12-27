@@ -9,7 +9,7 @@ import {
   Paper,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { Employee } from '../types';
+import { Employee } from '../stores/root-store';
 
 const MotionPaper = motion(Paper);
 

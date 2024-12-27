@@ -14,11 +14,14 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { StorageService } from '../utils/storage';
+// import { StorageService } from '../utils/storage';
+import { useSnapshot } from 'valtio';
+import { store, actions } from '../stores/root-store';
 
-const MotionPaper = motion(Paper);
+const MotionPaper = motion.create(Paper);
 
 export default function EmailVerification() {
+  const snap = useSnapshot(store);
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -34,14 +37,14 @@ export default function EmailVerification() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-
+  
     try {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         throw new Error('Please enter a valid email address');
       }
-
-      const existingOwner = StorageService.getOwnerByEmail(email);
+  
+      const existingOwner = snap.owners.find(owner => owner.email === email);
       
       if (!existingOwner) {
         setError('Email not found. Would you like to register as a new business owner?');
@@ -49,8 +52,9 @@ export default function EmailVerification() {
         setIsLoading(false);
         return;
       }
-
+  
       sessionStorage.setItem('businessOwnerEmail', email);
+      actions.setCurrentOwner(email);
       navigate('/wizard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -82,7 +86,7 @@ export default function EmailVerification() {
         throw new Error('Email template should start with @');
       }
 
-      StorageService.saveOwner({
+      actions.addOwner({
         email,
         firstName,
         lastName,
@@ -94,6 +98,7 @@ export default function EmailVerification() {
       });
 
       sessionStorage.setItem('businessOwnerEmail', email);
+      actions.setCurrentOwner(email);
       navigate('/wizard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -138,7 +143,7 @@ export default function EmailVerification() {
                 <form onSubmit={handleLogin}>
                   <Autocomplete
                     freeSolo
-                    options={StorageService.getAllOwners().map(owner => owner.email)}
+                    options={snap.owners.map(owner => owner.email)}
                     value={email}
                     onChange={(_, newValue) => setEmail(newValue || '')}
                     onInputChange={(_, newValue) => setEmail(newValue)}

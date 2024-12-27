@@ -19,24 +19,27 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Employee } from '../types';
-import { StorageService, StoredBusinessOwner } from '../utils/storage';
+// import { Employee } from '../types';
+// import { StorageService, StoredBusinessOwner } from '../utils/storage';
 import EmployeeForm from '../components/EmployeeForm';
 import EmployeeList from '../components/EmployeeList';
 import BusinessOwnerEdit from '../components/BusinessOwnerEdit';
+import { useSnapshot } from 'valtio';
+import { store, actions, Employee, BusinessOwner } from '../stores/root-store';
 
 const MotionPaper = motion(Paper);
 const MAX_EMPLOYEES = 10;
 
 export default function EmployeeWizard() {
+  const snap = useSnapshot(store);
   const navigate = useNavigate();
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  // const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [isEditingOwner, setIsEditingOwner] = useState(false);
-  const [ownerData, setOwnerData] = useState<StoredBusinessOwner | null>(null);
+  // const [ownerData, setOwnerData] = useState<StoredBusinessOwner | null>(null);
   const [showLimitMessage, setShowLimitMessage] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -44,17 +47,11 @@ export default function EmployeeWizard() {
 
   useEffect(() => {
     const email = sessionStorage.getItem('businessOwnerEmail');
-    
     if (!email) {
       navigate('/');
       return;
     }
-
-    const owner = StorageService.getOwnerByEmail(email);
-    if (owner) {
-      setOwnerData(owner);
-      setEmployees(owner.employees);
-    }
+    actions.setCurrentOwner(email);
   }, [navigate]);
 
   useEffect(() => {
@@ -70,12 +67,12 @@ export default function EmployeeWizard() {
   }, [unsavedChanges]);
 
   useEffect(() => {
-    if (employees.length >= MAX_EMPLOYEES) {
+    if (snap.currentEmployees.length >= MAX_EMPLOYEES) {
       setShowLimitMessage(true);
     } else {
       setShowLimitMessage(false);
     }
-  }, [employees.length]);
+  }, [snap.currentEmployees.length]);
 
   const handleNavigation = (path: string) => {
     if (unsavedChanges) {
@@ -87,62 +84,52 @@ export default function EmployeeWizard() {
   };
 
   const handleAddEmployee = async (employeeData: Omit<Employee, 'id'>) => {
-    if (employees.length >= MAX_EMPLOYEES) {
+    if (snap.currentEmployees.length >= MAX_EMPLOYEES) {
       setError('Maximum of 10 employees reached');
       return;
     }
-
-    if (employees.some(emp => emp.email === employeeData.email)) {
+  
+    if (snap.currentEmployees.some(emp => emp.email === employeeData.email)) {
       setError('An employee with this email already exists');
       return;
     }
-
-    const newEmployee: Employee = {
+  
+    actions.addEmployee({
       ...employeeData,
       id: crypto.randomUUID(),
-    };
-
-    setEmployees(prev => [...prev, newEmployee]);
-    setUnsavedChanges(true);
+    });
     setShowSuccess(true);
     setShowForm(false);
   };
 
   const handleEditEmployee = (id: string, data: Omit<Employee, 'id'>) => {
-    setEmployees(prev => prev.map(emp => 
-      emp.id === id ? { ...data, id } : emp
-    ));
-    setUnsavedChanges(true);
+    actions.updateEmployee(id, data);
     setShowSuccess(true);
   };
 
   const handleDeleteEmployee = (id: string) => {
-    setEmployees(prev => prev.filter(emp => emp.id !== id));
-    setUnsavedChanges(true);
+    actions.deleteEmployee(id);
   };
 
-  const saveToStorage = (employeeList: Employee[]) => {
-    const email = sessionStorage.getItem('businessOwnerEmail');
-    if (email && ownerData) {
-      StorageService.saveOwner({
-        ...ownerData,
-        employees: employeeList,
-      });
-    }
-  };
+  // const saveToStorage = (employeeList: Employee[]) => {
+  //   const email = sessionStorage.getItem('businessOwnerEmail');
+  //   if (email && ownerData) {
+  //     StorageService.saveOwner({
+  //       ...ownerData,
+  //       employees: employeeList,
+  //     });
+  //   }
+  // };
 
   const handleSubmitAll = async () => {
-    if (employees.length === 0) {
+    if (snap.currentEmployees.length === 0) {
       setError('Please add at least one employee');
       return;
     }
-
+  
     setIsLoading(true);
     try {
-      // Save to storage only on submit
-      saveToStorage(employees);
-      setUnsavedChanges(false);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      actions.saveChanges();
       navigate('/thank-you');
     } catch (err) {
       setError('Failed to submit employees. Please try again.');
@@ -215,7 +202,7 @@ export default function EmployeeWizard() {
                 Back to Login
               </Button>
             </Box>
-            {ownerData && (
+            {snap.currentOwner && (
               <Button
                 onClick={() => setIsEditingOwner(true)}
                 startIcon={<EditIcon />}
@@ -226,7 +213,7 @@ export default function EmployeeWizard() {
             )}
           </Box>
 
-          {ownerData && (
+          {snap.currentOwner && (
             <Typography 
               variant="h6" 
               sx={{ 
@@ -235,7 +222,7 @@ export default function EmployeeWizard() {
                 fontWeight: 'normal'
               }}
             >
-              Welcome back, {ownerData.firstName}!
+              Welcome back, {snap.currentOwner.firstName}!
             </Typography>
           )}
 
@@ -270,7 +257,7 @@ export default function EmployeeWizard() {
             </Alert>
           )}
 
-          {unsavedChanges && (
+          {snap.unsavedChanges && (
             <Alert 
               severity="info" 
               sx={{ mb: 2 }}
@@ -287,17 +274,19 @@ export default function EmployeeWizard() {
                 exit={{ opacity: 0, height: 0 }}
               >
                 <EmployeeForm 
-                  onSubmit={handleAddEmployee}
+                  onSubmit={(employeeData: Omit<Employee, "id">) => {
+                    handleAddEmployee(employeeData as Omit<Employee, "id">);
+                  }}
                   onCancel={() => setShowForm(false)}
                   isLoading={isLoading}
-                  emailTemplate={ownerData?.emailTemplate}
+                  emailTemplate={snap.currentOwner?.emailTemplate}
                 />
               </motion.div>
             )}
           </AnimatePresence>
 
           <EmployeeList 
-            employees={employees}
+            employees={snap.currentEmployees}
             onDelete={handleDeleteEmployee}
             onEdit={handleEditEmployee}
           />
@@ -306,7 +295,7 @@ export default function EmployeeWizard() {
             <Fab
               color="primary"
               onClick={() => setShowForm(true)}
-              disabled={employees.length >= MAX_EMPLOYEES || showForm}
+              disabled={snap.currentEmployees.length >= MAX_EMPLOYEES || showForm}
               sx={{
                 background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
               }}
@@ -317,7 +306,7 @@ export default function EmployeeWizard() {
             <Button
               variant="contained"
               onClick={handleSubmitAll}
-              disabled={isLoading || employees.length === 0}
+              disabled={isLoading || snap.currentEmployees.length === 0}
               sx={{
                 background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                 minWidth: 200,
@@ -329,11 +318,11 @@ export default function EmployeeWizard() {
         </MotionPaper>
       </Box>
 
-      {ownerData && (
+      {snap.currentOwner && (
         <BusinessOwnerEdit
           open={isEditingOwner}
           onClose={() => setIsEditingOwner(false)}
-          owner={ownerData}
+          owner={snap.currentOwner as BusinessOwner}  // Type assertion to handle readonly
         />
       )}
 

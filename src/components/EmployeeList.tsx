@@ -15,13 +15,13 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Employee } from '../types';
+import { Employee } from '../stores/root-store';
 import EmployeeForm from './EmployeeForm';
 
 interface EmployeeListProps {
-  employees: Employee[];
+  employees: readonly Employee[];
   onDelete: (id: string) => void;
-  onEdit: (id: string, data: Omit<Employee, 'id'>) => void;
+  onEdit: (id: string, data: Omit<Employee, "id">) => void;
 }
 
 export default function EmployeeList({ employees, onDelete, onEdit }: EmployeeListProps) {

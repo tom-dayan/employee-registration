@@ -12,23 +12,21 @@ import { motion } from 'framer-motion';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HomeIcon from '@mui/icons-material/Home';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
-import { StorageService } from '../utils/storage';
+import { useSnapshot } from 'valtio';
+import { store } from '../stores/root-store';
 
-const MotionPaper = motion(Paper);
-const MotionBox = motion(Box);
+const MotionPaper = motion.create(Paper);
+const MotionBox = motion.create(Box);
 
 export default function ThankYou() {
   const navigate = useNavigate();
-  const email = sessionStorage.getItem('businessOwnerEmail');
+  const snap = useSnapshot(store);
 
   useEffect(() => {
-    if (!email) {
+    if (!snap.currentOwner) {
       navigate('/');
     }
-  }, [navigate, email]);
-
-  const ownerData = email ? StorageService.getOwnerByEmail(email) : null;
-  const employeeCount = ownerData?.employees.length || 0;
+  }, [navigate, snap.currentOwner]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -43,6 +41,13 @@ export default function ThankYou() {
   const item = {
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0 }
+  };
+
+  const handleStartOver = () => {
+    // Clear session storage
+    sessionStorage.removeItem('businessOwnerEmail');
+    // Navigate to start
+    navigate('/');
   };
 
   return (
@@ -95,10 +100,10 @@ export default function ThankYou() {
             <MotionBox variants={item}>
               <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', borderRadius: 1 }}>
                 <Typography variant="body1" color="text.primary">
-                  {employeeCount} {employeeCount === 1 ? 'employee' : 'employees'} registered
+                  {snap.currentEmployees.length} {snap.currentEmployees.length === 1 ? 'employee' : 'employees'} registered
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  for {email}
+                  for {snap.currentOwner?.businessName}
                 </Typography>
               </Box>
             </MotionBox>
@@ -128,10 +133,7 @@ export default function ThankYou() {
 
               <Button
                 variant="outlined"
-                onClick={() => {
-                  sessionStorage.clear();
-                  navigate('/');
-                }}
+                onClick={handleStartOver}
                 startIcon={<HomeIcon />}
               >
                 Back to Home
