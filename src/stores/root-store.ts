@@ -74,7 +74,6 @@ export const actions = {
       if (store.currentOwner?.email === updatedOwner.email) {
         store.currentOwner = updatedOwner;
       }
-      this.syncToStorage();
     }
   },
 
@@ -104,6 +103,7 @@ export const actions = {
       };
       this.updateOwner(updatedOwner);
       store.unsavedChanges = false;
+      this.syncToJson();
     }
   },
 
@@ -195,7 +195,7 @@ subscribe(store, () => {
   }));
   
   // Try to sync with JSON
-  actions.syncToJson().catch(console.warn);
+  // actions.syncToJson().catch(console.warn);
 });
 
 // Initial attempt to load data

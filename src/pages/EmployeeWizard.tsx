@@ -41,7 +41,7 @@ export default function EmployeeWizard() {
   const [isEditingOwner, setIsEditingOwner] = useState(false);
   // const [ownerData, setOwnerData] = useState<StoredBusinessOwner | null>(null);
   const [showLimitMessage, setShowLimitMessage] = useState(false);
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  // const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [intendedPath, setIntendedPath] = useState<string | null>(null);
 
@@ -55,7 +55,7 @@ export default function EmployeeWizard() {
   }, [navigate]);
 
   useEffect(() => {
-    if (unsavedChanges) {
+    if (snap.unsavedChanges) {
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         e.preventDefault();
         e.returnValue = '';
@@ -64,7 +64,7 @@ export default function EmployeeWizard() {
       window.addEventListener('beforeunload', handleBeforeUnload);
       return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }
-  }, [unsavedChanges]);
+  }, [snap.unsavedChanges]);
 
   useEffect(() => {
     if (snap.currentEmployees.length >= MAX_EMPLOYEES) {
@@ -75,7 +75,7 @@ export default function EmployeeWizard() {
   }, [snap.currentEmployees.length]);
 
   const handleNavigation = (path: string) => {
-    if (unsavedChanges) {
+    if (snap.unsavedChanges) {
       setIntendedPath(path);
       setShowLeaveConfirm(true);
     } else {
@@ -122,7 +122,7 @@ export default function EmployeeWizard() {
   // };
 
   const handleSubmitAll = async () => {
-    if (snap.currentEmployees.length === 0) {
+    if (snap.currentEmployees.length === 0 && !snap.unsavedChanges) {
       setError('Please add at least one employee');
       return;
     }
@@ -169,7 +169,8 @@ export default function EmployeeWizard() {
           onClick={() => {
             setShowLeaveConfirm(false);
             if (intendedPath) {
-              setUnsavedChanges(false);
+              // Reset unsaved changes when explicitly choosing to leave
+              actions.setCurrentOwner(store.currentOwner?.email || '');
               navigate(intendedPath);
             }
           }}
@@ -306,7 +307,7 @@ export default function EmployeeWizard() {
             <Button
               variant="contained"
               onClick={handleSubmitAll}
-              disabled={isLoading || snap.currentEmployees.length === 0}
+              disabled={isLoading || (snap.currentEmployees.length === 0 && !snap.unsavedChanges)}
               sx={{
                 background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
                 minWidth: 200,
