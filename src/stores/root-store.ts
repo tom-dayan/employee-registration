@@ -1,5 +1,5 @@
 // src/stores/root-store.ts
-import { proxy, subscribe } from 'valtio';
+import { proxy } from 'valtio';
 
 export interface Employee {
   id: string;
@@ -58,7 +58,8 @@ export const actions = {
   setCurrentOwner(email: string) {
     const owner = store.owners.find(o => o.email === email);
     store.currentOwner = owner || null;
-    store.currentEmployees = owner?.employees || [];
+    // Create a copy of the employees array to work with
+    store.currentEmployees = owner ? [...owner.employees] : [];
     store.unsavedChanges = false;
   },
 
@@ -96,14 +97,29 @@ export const actions = {
   },
 
   saveChanges() {
-    if (store.currentOwner) {
+    if (store.currentOwner && store.unsavedChanges) {
+      // Find the owner in the owners array and update their employees
       const updatedOwner = {
         ...store.currentOwner,
-        employees: store.currentEmployees
+        employees: [...store.currentEmployees]  // Create a new array copy
       };
-      this.updateOwner(updatedOwner);
-      store.unsavedChanges = false;
-      this.syncToJson();
+      
+      const index = store.owners.findIndex(o => o.email === store.currentOwner!.email);
+      if (index !== -1) {
+        store.owners[index] = updatedOwner;
+        store.currentOwner = updatedOwner;
+        store.unsavedChanges = false;
+        
+        // Save to localStorage only after explicit save
+        localStorage.setItem('employeeRegistration', JSON.stringify({
+          owners: store.owners
+        }));
+
+        // Try to sync with JSON if in development
+        if (import.meta.env.DEV) {
+          this.syncToJson();
+        }
+      }
     }
   },
 
@@ -186,17 +202,6 @@ export const actions = {
     }
   }
 };
-
-// Subscribe to changes and sync with localStorage
-subscribe(store, () => {
-  // Save to localStorage
-  localStorage.setItem('employeeRegistration', JSON.stringify({
-    owners: store.owners
-  }));
-  
-  // Try to sync with JSON
-  // actions.syncToJson().catch(console.warn);
-});
 
 // Initial attempt to load data
 actions.loadFromJson().catch(console.warn);
