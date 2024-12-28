@@ -1,14 +1,3 @@
 {
-  "owners": [
-    {
-      "email": "tomdayan9@gmail.com",
-      "firstName": "Tom",
-      "lastName": "Dayan",
-      "businessName": "Tom's Business",
-      "phone": "6463004253",
-      "emailTemplate": "@gmail.com",
-      "registeredAt": "2024-12-27T19:12:06.410Z",
-      "employees": []
-    }
-  ]
+  "owners": []
 }
